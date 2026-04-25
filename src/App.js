@@ -345,9 +345,16 @@ const RecordScreen = ({ goal, onComplete, onCancel }) => {
       const t = setTimeout(() => { const f = captureFrame(); if (f) framesRef.current.push(f); }, delay);
       frameTimersRef.current.push(t);
     });
+    const startTime = Date.now();
     intervalRef.current = setInterval(() => {
-      setTimeLeft(t => { if (t <= 1) { clearInterval(intervalRef.current); finishRecording(); return 0; } return t - 1; });
-    }, 1000);
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const remaining = Math.max(0, 60 - elapsed);
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        clearInterval(intervalRef.current);
+        finishRecording();
+      }
+    }, 250);
   };
 
   const finishRecording = () => {
