@@ -418,7 +418,7 @@ const RecordScreen = ({ goal, onComplete, onCancel }) => {
   );
 };
 
-const analyzeWithClaude = async ({ transcript, frames }, goal, apiKey) => {
+const analyzeWithClaude = async ({ transcript, frames }, goal) => {
   const hasTranscript = transcript && transcript.length > 5;
   const hasFrames = frames && frames.length > 0;
   const promptText = `You are an expert communication coach giving daily feedback to someone practicing for one minute.
@@ -439,12 +439,12 @@ Respond ONLY with valid JSON (no markdown fences) in this schema:
   if (hasFrames) frames.forEach(f => content.push({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: f } }));
   content.push({ type: 'text', text: promptText });
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
+  const response = await fetch('/api/analyze', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ model: 'claude-sonnet-4-6', max_tokens: 1500, messages: [{ role: 'user', content }] }),
   });
-  if (!response.ok) throw new Error(`Analysis failed (${response.status}). Check your API key.`);
+  if (!response.ok) throw new Error(`Analysis failed (${response.status}).`);
   const data = await response.json();
   const textBlock = data.content.find(c => c.type === 'text');
   if (!textBlock) throw new Error('No analysis returned.');
@@ -458,7 +458,7 @@ const AnalyzingScreen = ({ data, goal, apiKey, onDone, onError }) => {
   useEffect(() => {
     (async () => {
       try {
-        const result = await analyzeWithClaude(data, goal, apiKey);
+        const result = await analyzeWithClaude(data, goal);
         const session = { id: Date.now().toString(), date: new Date().toISOString(), transcript: data.transcript, goal, ...result };
         const existing = STORAGE.get('sessions') || [];
         const updated = [...existing, session];
@@ -732,7 +732,7 @@ export default function App() {
   useEffect(() => {
     const u = STORAGE.get('user'); const g = STORAGE.get('goal'); const s = STORAGE.get('sessions') || []; const k = STORAGE.get('apiKey');
     if (u) setUser(u); if (g) setGoal(g); setSessions(s); if (k) setApiKey(k);
-    if (!k) setScreen('apiKey'); else if (u && g) setScreen('home'); else if (u) setScreen('goal'); else setScreen('welcome');
+    if (u && g) setScreen('home'); else if (u) setScreen('goal'); else setScreen('welcome');
   }, []);
 
   const handleLogout = () => { STORAGE.del('user'); STORAGE.del('goal'); STORAGE.del('sessions'); setUser(null); setGoal(null); setSessions([]); setScreen('welcome'); };
